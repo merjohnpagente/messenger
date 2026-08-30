@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#0084FF",
     "theme_color": "#0084FF",
-    "description": "Messenger by Meta."
+    "description": "Messenger by Meta.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

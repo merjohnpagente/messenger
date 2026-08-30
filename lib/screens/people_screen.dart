@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:messenger/core/services/supabase_service.dart';
+import 'package:messenger/features/chat/chat_repository.dart';
 import 'package:messenger/screens/chat_thread_screen.dart';
 import 'package:messenger/theme/messenger_theme.dart';
 import 'package:messenger/widgets/messenger_search_bar.dart';
@@ -31,8 +33,39 @@ class PeopleScreen extends StatefulWidget {
 class _PeopleScreenState extends State<PeopleScreen> {
   int _filterIndex = 0;
   String searchQuery = '';
+  final _repo = ChatRepository();
+  List<PersonModel> _livePeople = [];
+  bool _loadingLive = false;
 
   static const _filters = ['All', 'Active', 'Stories'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLiveUsers();
+  }
+
+  Future<void> _loadLiveUsers() async {
+    if (!SupabaseService.isReady) return;
+    setState(() => _loadingLive = true);
+    final users = await _repo.searchUsers('');
+    if (users.isNotEmpty && mounted) {
+      setState(() {
+        _livePeople = users.map((u) => PersonModel(
+          id: u['id'] as String,
+          name: u['name'] as String? ?? u['email'] as String,
+          avatarUrl: u['avatar_url'] as String? ?? 'https://api.dicebear.com/7.x/avataaars/svg?seed=${u['id']}',
+          isActive: u['is_online'] as bool? ?? false,
+          hasStory: false,
+        )).toList();
+        _loadingLive = false;
+      });
+    } else {
+      if (mounted) setState(() => _loadingLive = false);
+    }
+  }
+
+  List<PersonModel> get _sourcePeople => _livePeople.isNotEmpty ? _livePeople : _people;
 
   static const List<PersonModel> _people = [
     PersonModel(
@@ -99,7 +132,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
   ];
 
   List<PersonModel> _getFilteredPeople() {
-    List<PersonModel> result = List.of(_people);
+    List<PersonModel> result = List.of(_sourcePeople);
     if (_filterIndex == 1) {
       result = result.where((p) => p.isActive).toList();
     } else if (_filterIndex == 2) {

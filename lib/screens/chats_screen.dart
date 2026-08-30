@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:messenger/core/services/supabase_service.dart';
+import 'package:messenger/features/chat/chat_repository.dart';
 import 'package:messenger/screens/chat_thread_screen.dart';
 import 'package:messenger/theme/messenger_theme.dart';
 import 'package:messenger/widgets/chat_tile.dart';
@@ -54,11 +57,34 @@ class _ChatsScreenState extends State<ChatsScreen> {
   late List<ConversationModel> conversations;
   late List<StoryModel> stories;
   String searchQuery = '';
+  final _repo = ChatRepository();
+  bool _liveLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _initializeMockData();
+    _loadLiveConversations();
+  }
+
+  Future<void> _loadLiveConversations() async {
+    if (!SupabaseService.isReady) return;
+    final live = await _repo.fetchConversations();
+    if (live.isNotEmpty && mounted) {
+      setState(() {
+        // Map Supabase conversations to UI model; keep lastMessage placeholder if empty
+        conversations = live.map((c) => ConversationModel(
+          id: c['id'] as String,
+          name: c['name'] as String? ?? 'Conversation',
+          avatarUrl: c['avatar_url'] as String? ?? 'https://api.dicebear.com/7.x/avataaars/svg?seed=${c['id']}',
+          lastMessage: 'Tap to open chat (real Supabase)',
+          lastMessageTime: DateTime.tryParse(c['created_at'] as String? ?? '') ?? DateTime.now(),
+          unreadCount: 0,
+          isActive: false,
+        )).toList();
+        _liveLoaded = true;
+      });
+    }
   }
 
   void _initializeMockData() {
@@ -258,6 +284,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       appBar: _buildAppBar(context, isDark),
       body: Column(
         children: [
+          if (!SupabaseService.isReady) Container(height: 24, width: double.infinity, color: const Color(0xFFFF7A00), alignment: Alignment.center, child: const Text('Demo mode — offline Hive queue · add SUPABASE_URL for LIVE', style: TextStyle(color: Colors.white, fontSize:12, fontWeight: FontWeight.w600))),
           MessengerSearchBar(
             onChanged: (value) {
               setState(() {
@@ -289,8 +316,28 @@ class _ChatsScreenState extends State<ChatsScreen> {
   PreferredSizeWidget _buildAppBar(BuildContext context, bool isDark) {
     return AppBar(
       toolbarHeight: 56,
-      title: const Text('Messenger'),
+      title: Row(children: [
+        const Text('Messenger'),
+        if (_liveLoaded) Container(margin: const EdgeInsets.only(left:8), padding: const EdgeInsets.symmetric(horizontal:6, vertical:2), decoration: BoxDecoration(color: MessengerTheme.messengerGreen, borderRadius: BorderRadius.circular(8)), child: const Text('LIVE', style: TextStyle(color: Colors.white, fontSize:10))),
+        if (!SupabaseService.isReady) Container(margin: const EdgeInsets.only(left:8), padding: const EdgeInsets.symmetric(horizontal:6, vertical:2), decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(8)), child: const Text('DEMO', style: TextStyle(color: Colors.white, fontSize:10))),
+      ]),
       actions: [
+        IconButton(
+          onPressed: () async {
+            if (SupabaseService.isReady) {
+              await SupabaseService.client.auth.signOut();
+              if (context.mounted) context.go('/login');
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Demo mode — configure Supabase for real logout')));
+            }
+          },
+          icon: const Icon(
+            Icons.logout_rounded,
+            size: 22,
+            color: MessengerTheme.messengerBlue,
+          ),
+          tooltip: 'Log out',
+        ),
         IconButton(
           onPressed: () {},
           icon: const Icon(
@@ -376,6 +423,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   name: chat.name,
                   avatarUrl: chat.avatarUrl,
                   isActive: chat.isActive,
+                  conversationId: chat.id,
                   initialMessages: _mockMessagesFor(chat),
                 ),
               ),

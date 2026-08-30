@@ -1,5 +1,13 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:messenger/core/services/storage_service.dart';
+import 'package:messenger/core/services/supabase_service.dart';
+import 'package:messenger/features/chat/chat_repository.dart';
+import 'package:messenger/screens/call_screen.dart';
 import 'package:messenger/theme/messenger_theme.dart';
 
 class MessageModel {
@@ -24,6 +32,7 @@ class ChatThreadScreen extends StatefulWidget {
   final String name;
   final String avatarUrl;
   final bool isActive;
+  final String? conversationId;
   final List<MessageModel> initialMessages;
 
   const ChatThreadScreen({
@@ -31,6 +40,7 @@ class ChatThreadScreen extends StatefulWidget {
     required this.name,
     required this.avatarUrl,
     required this.isActive,
+    this.conversationId,
     this.initialMessages = const [],
   });
 
@@ -44,6 +54,9 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showSend = false;
   bool _showTyping = false;
+  Timer? _typingDebounce;
+  final _chatRepo = ChatRepository();
+  String get _convId => widget.conversationId ?? widget.name.hashCode.toString();
 
   @override
   void initState() {
@@ -56,30 +69,48 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
           _showSend = hasText;
         });
       }
+      // Typing broadcast debounce 300ms (spec) — free, no DB bloat
+      _typingDebounce?.cancel();
+      if (SupabaseService.isReady) {
+        _chatRepo.broadcastTyping(_convId, hasText);
+        _typingDebounce = Timer(const Duration(milliseconds: 800), () => _chatRepo.broadcastTyping(_convId, false));
+      }
     });
+    // Subscribe typing via Supabase broadcast if configured
+    if (SupabaseService.isReady) {
+      _chatRepo.subscribeTyping(_convId, (uid, isTyping) {
+        if (!mounted || uid == SupabaseService.currentUser?.id) return;
+        setState(() => _showTyping = isTyping);
+      });
+    }
   }
 
   @override
   void dispose() {
+    _typingDebounce?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
+    final local = MessageModel(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      text: text,
+      time: DateTime.now(),
+      isMine: true,
+      isSeen: false,
+    );
     setState(() {
-      _messages.add(MessageModel(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
-        text: text,
-        time: DateTime.now(),
-        isMine: true,
-      ));
+      _messages.add(local);
       _controller.clear();
     });
     _scrollToBottom();
-    _simulateReply();
+    // Try real send; fallback to mock reply if offline/demo
+    final sent = await _chatRepo.sendMessage(conversationId: _convId, text: text);
+    if (sent == null && !SupabaseService.isReady) _simulateReply();
   }
 
   void _simulateReply() {
@@ -227,7 +258,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
       ),
       actions: [
         IconButton(
-          onPressed: () {},
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CallScreen(name: widget.name, avatarUrl: widget.avatarUrl, isVideo: false, isIncoming: false, conversationId: _convId))),
           icon: const Icon(
             Icons.call_outlined,
             size: 22,
@@ -235,7 +266,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
           ),
         ),
         IconButton(
-          onPressed: () {},
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CallScreen(name: widget.name, avatarUrl: widget.avatarUrl, isVideo: true, isIncoming: false, conversationId: _convId))),
           icon: const Icon(
             Icons.videocam_outlined,
             size: 24,
@@ -328,7 +359,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           IconButton(
-            onPressed: () {},
+            onPressed: _showAttachmentSheet,
             icon: const Icon(
               Icons.add_circle_outline_rounded,
               size: 26,
@@ -388,7 +419,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
             )
           else
             IconButton(
-              onPressed: () {},
+              onPressed: _pickImage,
               icon: Icon(
                 Icons.camera_alt_outlined,
                 size: 26,
@@ -400,6 +431,52 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
         ],
       ),
     );
+  }
+
+  void _showAttachmentSheet() {
+    showModalBottomSheet(context: context, builder: (c) => SafeArea(child: Wrap(children: [
+      ListTile(leading: const Icon(Icons.photo, color: MessengerTheme.messengerBlue), title: const Text('Photo'), onTap: () { Navigator.pop(c); _pickImage(); }),
+      ListTile(leading: const Icon(Icons.attach_file, color: MessengerTheme.messengerBlue), title: const Text('File'), onTap: () { Navigator.pop(c); _pickFile(); }),
+      ListTile(leading: const Icon(Icons.camera_alt, color: MessengerTheme.messengerBlue), title: const Text('Camera'), onTap: () { Navigator.pop(c); _pickImage(source: ImageSource.camera); }),
+    ])));
+  }
+
+  Future<void> _pickImage({ImageSource source = ImageSource.gallery}) async {
+    try {
+      final picker = ImagePicker();
+      final x = await picker.pickImage(source: source, imageQuality: 70, maxWidth: 1024);
+      if (x == null) return;
+      final file = File(x.path);
+      if (await file.length() > StorageService.maxImageBytes) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Image too large — compressing to <1MB...')));
+      }
+      setState(() => _messages.add(MessageModel(id: DateTime.now().microsecondsSinceEpoch.toString(), text: '📷 Photo', time: DateTime.now(), isMine: true)));
+      _scrollToBottom();
+      final url = await StorageService.uploadMessageMedia(file, _convId);
+      if (url != null && SupabaseService.isReady) {
+        await _chatRepo.sendMessage(conversationId: _convId, text: '📷 Photo', type: 'image', mediaUrl: url);
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pick failed: $e')));
+    }
+  }
+
+  Future<void> _pickFile() async {
+    try {
+      final res = await FilePicker.platform.pickFiles(withData: false);
+      if (res == null || res.files.single.path == null) return;
+      final file = File(res.files.single.path!);
+      if (await file.length() > StorageService.maxVideoBytes) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File exceeds 10MB limit (free tier)')));
+        return;
+      }
+      setState(() => _messages.add(MessageModel(id: DateTime.now().microsecondsSinceEpoch.toString(), text: '📎 ${res.files.single.name}', time: DateTime.now(), isMine: true)));
+      _scrollToBottom();
+      final url = await StorageService.uploadMessageMedia(file, _convId, ext: res.files.single.extension ?? 'bin');
+      if (url != null && SupabaseService.isReady) await _chatRepo.sendMessage(conversationId: _convId, text: res.files.single.name, type: 'file', mediaUrl: url);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('File pick failed: $e')));
+    }
   }
 }
 

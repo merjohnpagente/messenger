@@ -76,6 +76,7 @@ class WebrtcP2pImpl implements WebrtcService {
 
   @override
   Future<void> switchCamera() async {
+    if (kIsWeb) return;
     final videoTrack = _localStream?.getVideoTracks().firstOrNull;
     if (videoTrack != null) {
       await Helper.switchCamera(videoTrack);
@@ -84,6 +85,7 @@ class WebrtcP2pImpl implements WebrtcService {
 
   @override
   Future<void> setSpeaker(bool speakerOn) async {
+    if (kIsWeb) return;
     await Helper.setSpeakerphoneOn(speakerOn);
   }
 
