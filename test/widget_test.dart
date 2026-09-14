@@ -22,6 +22,7 @@ void main() {
   testWidgets('Splash navigates to login when not configured', (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: MessengerApp()));
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('Log in to continue'), findsWidgets);
+    // Updated modern UI uses "Welcome back" / "Log in" headings
+    expect(find.textContaining('Log in'), findsWidgets);
   });
 }

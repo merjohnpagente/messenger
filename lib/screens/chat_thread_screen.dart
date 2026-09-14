@@ -144,35 +144,54 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final w = MediaQuery.sizeOf(context).width;
+    final isWide = w >= 840;
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0F0F10) : const Color(0xFFF8FAFF),
       appBar: _buildAppBar(context),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                final showDateDivider = _shouldShowDateDivider(index);
-                return Column(
-                  children: [
-                    if (showDateDivider)
-                      _buildDateDivider(context, message.time),
-                    _MessageRow(
-                      message: message,
-                      avatarUrl: widget.avatarUrl,
-                      isActive: widget.isActive,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isWide ? 760 : double.infinity),
+          child: Column(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF121214) : Colors.white,
+                    borderRadius: isWide ? BorderRadius.circular(20) : null,
+                    border: isWide ? Border.all(color: isDark ? Colors.white10 : const Color(0xFFE8EAED)) : null,
+                  ),
+                  margin: EdgeInsets.all(isWide ? 12 : 0),
+                  child: ClipRRect(
+                    borderRadius: isWide ? BorderRadius.circular(20) : BorderRadius.zero,
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final message = _messages[index];
+                        final showDateDivider = _shouldShowDateDivider(index);
+                        return Column(
+                          children: [
+                            if (showDateDivider) _buildDateDivider(context, message.time),
+                            _MessageRow(
+                              message: message,
+                              avatarUrl: widget.avatarUrl,
+                              isActive: widget.isActive,
+                            ),
+                          ],
+                        );
+                      },
                     ),
-                  ],
-                );
-              },
-            ),
+                  ),
+                ),
+              ),
+              if (_showTyping) _buildTypingIndicator(context),
+              _buildInputBar(context),
+            ],
           ),
-          if (_showTyping) _buildTypingIndicator(context),
-          _buildInputBar(context),
-        ],
+        ),
       ),
     );
   }
@@ -188,100 +207,57 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return AppBar(
-      toolbarHeight: 60,
-      leadingWidth: 56,
-      leading: IconButton(
-        onPressed: () => Navigator.pop(context),
-        icon: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          size: 20,
-          color: MessengerTheme.messengerBlue,
+      toolbarHeight: 62,
+      backgroundColor: isDark ? const Color(0xFF1A1A1E) : Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      leadingWidth: 44,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 8),
+        child: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(color: isDark ? const Color(0xFF232324) : const Color(0xFFF0F2F5), shape: BoxShape.circle),
+            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          ),
+          padding: EdgeInsets.zero,
+          color: isDark ? Colors.white : Colors.black87,
         ),
       ),
-      titleSpacing: 0,
+      titleSpacing: 8,
       title: Row(
         children: [
-          Stack(
-            alignment: Alignment.bottomRight,
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundImage: NetworkImage(widget.avatarUrl),
-                backgroundColor: isDark
-                    ? MessengerTheme.darkSecondaryBg
-                    : MessengerTheme.lightSecondaryBg,
-              ),
-              if (widget.isActive)
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: MessengerTheme.messengerGreen,
-                    border: Border.all(
-                      color: isDark
-                          ? MessengerTheme.darkBg
-                          : MessengerTheme.lightBg,
-                      width: 2,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          Stack(alignment: Alignment.bottomRight, children: [
+            Container(
+              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isDark ? const Color(0xFF1A1A1E) : Colors.white, width: 2), boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 8, offset: Offset(0, 2))]),
+              child: CircleAvatar(radius: 20, backgroundImage: NetworkImage(widget.avatarUrl), backgroundColor: isDark ? MessengerTheme.darkSecondaryBg : const Color(0xFFF0F2F5)),
+            ),
+            if (widget.isActive)
+              Container(width: 13, height: 13, decoration: BoxDecoration(shape: BoxShape.circle, color: MessengerTheme.messengerGreen, border: Border.all(color: isDark ? const Color(0xFF1A1A1E) : Colors.white, width: 2), boxShadow: const [BoxShadow(color: Color(0x330084FF), blurRadius: 6)])),
+          ]),
           const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.name,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              Text(
-                widget.isActive ? 'Active now' : 'Last seen recently',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: widget.isActive
-                      ? MessengerTheme.messengerBlue
-                      : (isDark
-                          ? const Color(0xFF8A8D91)
-                          : MessengerTheme.textSecondary),
-                ),
-              ),
-            ],
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(widget.name, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
+              Row(children: [
+                if (widget.isActive) Container(width: 6, height: 6, margin: const EdgeInsets.only(right: 4), decoration: const BoxDecoration(color: MessengerTheme.messengerGreen, shape: BoxShape.circle)),
+                Text(widget.isActive ? 'Active now • Online' : 'Last seen recently', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: widget.isActive ? MessengerTheme.messengerGreen : (isDark ? const Color(0xFF8A8D91) : MessengerTheme.textSecondary))),
+              ]),
+            ]),
           ),
         ],
       ),
       actions: [
-        IconButton(
-          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CallScreen(name: widget.name, avatarUrl: widget.avatarUrl, isVideo: false, isIncoming: false, conversationId: _convId))),
-          icon: const Icon(
-            Icons.call_outlined,
-            size: 22,
-            color: MessengerTheme.messengerBlue,
-          ),
-        ),
-        IconButton(
-          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CallScreen(name: widget.name, avatarUrl: widget.avatarUrl, isVideo: true, isIncoming: false, conversationId: _convId))),
-          icon: const Icon(
-            Icons.videocam_outlined,
-            size: 24,
-            color: MessengerTheme.messengerBlue,
-          ),
-        ),
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(
-            Icons.info_outline_rounded,
-            size: 22,
-            color: MessengerTheme.messengerBlue,
-          ),
-        ),
+        IconButton.filledTonal(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CallScreen(name: widget.name, avatarUrl: widget.avatarUrl, isVideo: false, isIncoming: false, conversationId: _convId))), icon: const Icon(Icons.call_rounded, size: 19), style: IconButton.styleFrom(backgroundColor: isDark ? const Color(0xFF232324) : const Color(0xFFEAF3FF), foregroundColor: MessengerTheme.messengerBlue)),
+        IconButton.filledTonal(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CallScreen(name: widget.name, avatarUrl: widget.avatarUrl, isVideo: true, isIncoming: false, conversationId: _convId))), icon: const Icon(Icons.videocam_rounded, size: 19), style: IconButton.styleFrom(backgroundColor: MessengerTheme.messengerBlue, foregroundColor: Colors.white)),
+        const SizedBox(width: 4),
+        IconButton(onPressed: () {}, icon: Icon(Icons.more_vert_rounded, size: 20, color: isDark ? Colors.white70 : MessengerTheme.textSecondary)),
+        const SizedBox(width: 8),
       ],
+      bottom: PreferredSize(preferredSize: const Size.fromHeight(1), child: Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFE8EAED))),
     );
   }
 
@@ -290,156 +266,140 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     final today = DateTime(now.year, now.month, now.day);
     final date = DateTime(time.year, time.month, time.day);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     String label;
-    if (date == today) {
-      label = 'Today';
-    } else if (date == today.subtract(const Duration(days: 1))) {
-      label = 'Yesterday';
-    } else {
-      label = DateFormat('MMMM d').format(time);
-    }
-
+    if (date == today) label = 'Today';
+    else if (date == today.subtract(const Duration(days: 1))) label = 'Yesterday';
+    else label = DateFormat('MMMM d, yyyy').format(time);
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      margin: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: isDark
-            ? MessengerTheme.darkSecondaryBg
-            : MessengerTheme.lightSecondaryBg,
-        borderRadius: BorderRadius.circular(20),
+        color: isDark ? const Color(0xFF232324) : Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE4E6EB)),
+        boxShadow: isDark ? [] : const [BoxShadow(color: Color(0x0A000000), blurRadius: 8, offset: Offset(0, 2))],
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: isDark
-              ? const Color(0xFFB0B3B8)
-              : MessengerTheme.textSecondary,
-        ),
-      ),
+      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: isDark ? const Color(0xFFB0B3B8) : MessengerTheme.textSecondary)),
     );
   }
 
   Widget _buildTypingIndicator(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Text(
-        '${widget.name} is typing…',
-        style: TextStyle(
-          fontSize: 12,
-          color: isDark
-              ? const Color(0xFFB0B3B8)
-              : MessengerTheme.textSecondary,
-        ),
-      ),
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(color: isDark ? const Color(0xFF232324) : const Color(0xFFF0F2F5), borderRadius: BorderRadius.circular(18)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        SizedBox(width: 36, height: 16, child: Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (i) => AnimatedContainer(duration: Duration(milliseconds: 400 + i * 120), margin: const EdgeInsets.symmetric(horizontal: 2), width: 6, height: 6, decoration: BoxDecoration(color: isDark ? const Color(0xFF8A8D91) : MessengerTheme.textSecondary, shape: BoxShape.circle))))),
+        const SizedBox(width: 8),
+        Text('${widget.name} is typing…', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: isDark ? const Color(0xFFB0B3B8) : MessengerTheme.textSecondary)),
+      ]),
     );
   }
 
   Widget _buildInputBar(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 12),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 14),
       decoration: BoxDecoration(
-        color: isDark ? MessengerTheme.darkBg : MessengerTheme.lightBg,
-        border: Border(
-          top: BorderSide(
-            color: isDark
-                ? MessengerTheme.darkDividerColor
-                : MessengerTheme.dividerColor,
-          ),
-        ),
+        color: isDark ? const Color(0xFF1A1A1E) : Colors.white,
+        border: Border(top: BorderSide(color: isDark ? Colors.white10 : const Color(0xFFE8EAED))),
+        boxShadow: const [BoxShadow(color: Color(0x0F000000), blurRadius: 16, offset: Offset(0, -4))],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          IconButton(
-            onPressed: _showAttachmentSheet,
-            icon: const Icon(
-              Icons.add_circle_outline_rounded,
-              size: 26,
-              color: MessengerTheme.messengerBlue,
-            ),
+          Container(
+            decoration: BoxDecoration(color: MessengerTheme.messengerBlue.withOpacity(0.12), shape: BoxShape.circle),
+            child: IconButton(onPressed: _showAttachmentSheet, icon: const Icon(Icons.add_rounded, size: 22, color: MessengerTheme.messengerBlue)),
           ),
+          const SizedBox(width: 8),
           Expanded(
             child: Container(
-              constraints: const BoxConstraints(minHeight: 40, maxHeight: 100),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? MessengerTheme.darkSecondaryBg
-                    : MessengerTheme.lightSecondaryBg,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: TextField(
-                controller: _controller,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _sendMessage(),
-                maxLines: null,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontSize: 15,
-                      color: isDark ? Colors.white : Colors.black,
+              constraints: const BoxConstraints(minHeight: 44, maxHeight: 110),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(color: isDark ? const Color(0xFF232324) : const Color(0xFFF0F2F5), borderRadius: BorderRadius.circular(22), border: Border.all(color: isDark ? Colors.white10 : Colors.transparent)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _sendMessage(),
+                      maxLines: null,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 15, color: isDark ? Colors.white : Colors.black87),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        isCollapsed: true,
+                        hintText: 'Message ${widget.name.split(' ').first}…',
+                        hintStyle: TextStyle(fontSize: 15, color: isDark ? const Color(0xFF8A8D91) : MessengerTheme.textSecondary),
+                      ),
                     ),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  isCollapsed: true,
-                  hintText: 'Message',
-                  hintStyle: TextStyle(
-                    fontSize: 15,
-                    color: isDark
-                        ? const Color(0xFF8A8D91)
-                        : MessengerTheme.textSecondary,
                   ),
-                ),
+                  GestureDetector(onTap: () {}, child: Padding(padding: const EdgeInsets.only(left: 8), child: Icon(Icons.emoji_emotions_outlined, size: 22, color: isDark ? const Color(0xFF8A8D91) : MessengerTheme.textSecondary))),
+                ],
               ),
             ),
           ),
-          const SizedBox(width: 4),
-          if (_showSend)
-            GestureDetector(
-              onTap: _sendMessage,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: MessengerTheme.messengerBlue,
-                ),
-                child: const Icon(
-                  Icons.send_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-            )
-          else
-            IconButton(
-              onPressed: _pickImage,
-              icon: Icon(
-                Icons.camera_alt_outlined,
-                size: 26,
-                color: isDark
-                    ? const Color(0xFFB0B3B8)
-                    : MessengerTheme.textSecondary,
-              ),
-            ),
+          const SizedBox(width: 8),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: _showSend
+                ? GestureDetector(
+                    key: const ValueKey('send'),
+                    onTap: _sendMessage,
+                    child: Container(width: 44, height: 44, decoration: const BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Color(0xFF0084FF), Color(0xFF0066FF)])), child: const Icon(Icons.send_rounded, color: Colors.white, size: 20)),
+                  )
+                : Container(
+                    key: const ValueKey('cam'),
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: isDark ? const Color(0xFF232324) : const Color(0xFFF0F2F5)),
+                    child: IconButton(onPressed: _pickImage, icon: Icon(Icons.camera_alt_rounded, size: 20, color: isDark ? const Color(0xFFB0B3B8) : MessengerTheme.textSecondary)),
+                  ),
+          ),
         ],
       ),
     );
   }
 
   void _showAttachmentSheet() {
-    showModalBottomSheet(context: context, builder: (c) => SafeArea(child: Wrap(children: [
-      ListTile(leading: const Icon(Icons.photo, color: MessengerTheme.messengerBlue), title: const Text('Photo'), onTap: () { Navigator.pop(c); _pickImage(); }),
-      ListTile(leading: const Icon(Icons.attach_file, color: MessengerTheme.messengerBlue), title: const Text('File'), onTap: () { Navigator.pop(c); _pickFile(); }),
-      ListTile(leading: const Icon(Icons.camera_alt, color: MessengerTheme.messengerBlue), title: const Text('Camera'), onTap: () { Navigator.pop(c); _pickImage(source: ImageSource.camera); }),
-    ])));
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E1E20) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (c) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 36, height: 4, decoration: BoxDecoration(color: isDark ? Colors.white24 : const Color(0xFFE4E6EB), borderRadius: BorderRadius.circular(999))),
+              const SizedBox(height: 16),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+                _sheetBtn(c, Icons.photo_rounded, 'Gallery', const Color(0xFF0084FF), () { Navigator.pop(c); _pickImage(); }),
+                _sheetBtn(c, Icons.camera_alt_rounded, 'Camera', const Color(0xFF31A24C), () { Navigator.pop(c); _pickImage(source: ImageSource.camera); }),
+                _sheetBtn(c, Icons.attach_file_rounded, 'File', const Color(0xFFFF9500), () { Navigator.pop(c); _pickFile(); }),
+                _sheetBtn(c, Icons.location_on_rounded, 'Location', const Color(0xFFE04545), () => Navigator.pop(c)),
+              ]),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
   }
+
+  Widget _sheetBtn(BuildContext c, IconData icon, String label, Color color, VoidCallback onTap) => GestureDetector(
+        onTap: onTap,
+        child: Column(children: [
+          Container(width: 56, height: 56, decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle), child: Icon(icon, color: color, size: 26)),
+          const SizedBox(height: 8),
+          Text(label, style: Theme.of(c).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600)),
+        ]),
+      );
 
   Future<void> _pickImage({ImageSource source = ImageSource.gallery}) async {
     try {
@@ -494,103 +454,45 @@ class _MessageRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final bubbleColor = message.isMine
-        ? MessengerTheme.messengerBlue
-        : (isDark
-            ? MessengerTheme.darkIncomingBubble
-            : MessengerTheme.incomingBubble);
-    final textColor = message.isMine
-        ? Colors.white
-        : (isDark ? Colors.white : Colors.black);
     const radius = Radius.circular(18);
-
+    final isMine = message.isMine;
+    final maxW = MediaQuery.sizeOf(context).width * 0.72;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Column(
-        crossAxisAlignment: message.isMine
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
+        crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: message.isMine
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
+            mainAxisAlignment: isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              if (message.isTyping) ...[
-                Container(
-                  width: 34,
-                  height: 34,
-                  margin: const EdgeInsets.only(right: 4),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      for (var i = 0; i < 3; i++)
-                        TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0, end: 1),
-                          duration: Duration(milliseconds: 600 + i * 200),
-                          builder: (context, value, child) {
-                            final offset = (value * 4).abs();
-                            return Transform.translate(
-                              offset: Offset(0, -offset),
-                              child: child,
-                            );
-                          },
-                          child: Container(
-                            width: 7,
-                            height: 7,
-                            margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isDark
-                                  ? const Color(0xFF8A8D91)
-                                  : MessengerTheme.textSecondary,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+              if (!isMine) ...[
+                CircleAvatar(radius: 14, backgroundImage: NetworkImage(avatarUrl), backgroundColor: isDark ? const Color(0xFF232324) : const Color(0xFFF0F2F5)),
+                const SizedBox(width: 8),
               ],
               Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bubbleColor,
-                    borderRadius: BorderRadius.only(
-                      topLeft: radius,
-                      topRight: radius,
-                      bottomLeft: message.isMine ? radius : radius * 0.25,
-                      bottomRight: message.isMine ? radius * 0.25 : radius,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxW),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: isMine ? const LinearGradient(colors: [Color(0xFF0084FF), Color(0xFF0066FF)]) : null,
+                      color: isMine ? null : (isDark ? const Color(0xFF2A2A2E) : const Color(0xFFF0F2F5)),
+                      borderRadius: BorderRadius.only(topLeft: radius, topRight: radius, bottomLeft: isMine ? radius : const Radius.circular(4), bottomRight: isMine ? const Radius.circular(4) : radius),
+                      boxShadow: isMine ? const [BoxShadow(color: Color(0x1A0084FF), blurRadius: 10, offset: Offset(0, 2))] : null,
                     ),
-                  ),
-                  child: Text(
-                    message.text,
-                    style: TextStyle(
-                      fontSize: 15,
-                      height: 1.3,
-                      color: textColor,
-                    ),
+                    child: Text(message.text, style: TextStyle(fontSize: 14.5, height: 1.35, color: isMine ? Colors.white : (isDark ? Colors.white : const Color(0xFF050505)), fontWeight: FontWeight.w400)),
                   ),
                 ),
               ),
+              if (isMine) const SizedBox(width: 6),
+              if (isMine)
+                Icon(message.isSeen ? Icons.done_all_rounded : Icons.done_rounded, size: 14, color: message.isSeen ? MessengerTheme.messengerBlue : const Color(0xFFB0B3B8)),
             ],
           ),
           Padding(
-            padding: const EdgeInsets.only(top: 3),
-            child: Text(
-              '${DateFormat('HH:mm').format(message.time)}${message.isMine && message.isSeen ? ' · Seen' : ''}',
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark
-                    ? const Color(0xFF8A8D91)
-                    : MessengerTheme.textSecondary,
-              ),
-            ),
+            padding: EdgeInsets.only(top: 4, left: isMine ? 0 : 36, right: isMine ? 22 : 0),
+            child: Text('${DateFormat('HH:mm').format(message.time)}${isMine && message.isSeen ? ' · Seen' : ''}', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500, color: isDark ? const Color(0xFF8A8D91) : const Color(0xFF65676B))),
           ),
         ],
       ),

@@ -32,11 +32,11 @@ class StoryCircle extends StatelessWidget {
             alignment: Alignment.center,
             clipBehavior: Clip.none,
             children: [
-              // Story ring (gradient) or plain grey ring
+              // Story ring — modern thicker gradient + shadow
               Container(
-                width: 62,
-                height: 62,
-                padding: const EdgeInsets.all(3),
+                width: 68,
+                height: 68,
+                padding: const EdgeInsets.all(3.2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: hasStory
@@ -48,24 +48,22 @@ class StoryCircle extends StatelessWidget {
                       : null,
                   color: hasStory
                       ? null
-                      : (isDark
-                          ? MessengerTheme.darkDividerColor
-                          : MessengerTheme.dividerColor),
+                      : (isDark ? const Color(0xFF2A2A2E) : const Color(0xFFE8EAED)),
+                  boxShadow: hasStory
+                      ? const [BoxShadow(color: Color(0x330084FF), blurRadius: 10, offset: Offset(0, 2))]
+                      : null,
                 ),
                 child: Container(
-                  padding: const EdgeInsets.all(3),
+                  padding: const EdgeInsets.all(3.5),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isDark
-                        ? MessengerTheme.darkBg
-                        : MessengerTheme.lightBg,
+                    color: isDark ? MessengerTheme.darkBg : Colors.white,
+                    boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 8, offset: Offset(0, 2))],
                   ),
                   child: CircleAvatar(
                     radius: 26,
                     backgroundImage: NetworkImage(avatarUrl),
-                    backgroundColor: isDark
-                        ? MessengerTheme.darkSecondaryBg
-                        : MessengerTheme.lightSecondaryBg,
+                    backgroundColor: isDark ? MessengerTheme.darkSecondaryBg : const Color(0xFFF0F2F5),
                   ),
                 ),
               ),
@@ -89,29 +87,21 @@ class StoryCircle extends StatelessWidget {
                     ),
                   ),
                 ),
-              // Your story plus badge
+              // Your story plus badge — gradient
               if (isYourStory)
                 Positioned(
                   bottom: 0,
                   right: 0,
                   child: Container(
-                    width: 26,
-                    height: 26,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: MessengerTheme.messengerBlue,
-                      border: Border.all(
-                        color: isDark
-                            ? MessengerTheme.darkBg
-                            : MessengerTheme.lightBg,
-                        width: 3,
-                      ),
+                      gradient: const LinearGradient(colors: [Color(0xFF0084FF), Color(0xFF0066FF)]),
+                      border: Border.all(color: isDark ? MessengerTheme.darkBg : Colors.white, width: 3),
+                      boxShadow: const [BoxShadow(color: Color(0x330084FF), blurRadius: 8, offset: Offset(0, 2))],
                     ),
-                    child: const Icon(
-                      Icons.add,
-                      color: Colors.white,
-                      size: 16,
-                    ),
+                    child: const Icon(Icons.add_rounded, color: Colors.white, size: 16),
                   ),
                 ),
             ],

@@ -8,6 +8,7 @@ import 'package:messenger/screens/chats_screen.dart';
 import 'package:messenger/screens/people_screen.dart';
 import 'package:messenger/screens/stories_screen.dart';
 import 'package:messenger/theme/messenger_theme.dart';
+import 'package:messenger/widgets/responsive_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,54 +52,36 @@ class _MessengerHomeState extends State<MessengerHome> {
     CallsScreen(),
   ];
 
+  static const _destinations = [
+    AdaptiveDestination(
+      icon: Icons.chat_bubble_outline_rounded,
+      selectedIcon: Icons.chat_bubble_rounded,
+      label: 'Chats',
+    ),
+    AdaptiveDestination(
+      icon: Icons.people_outline_rounded,
+      selectedIcon: Icons.people_rounded,
+      label: 'People',
+    ),
+    AdaptiveDestination(
+      icon: Icons.auto_awesome_outlined,
+      selectedIcon: Icons.auto_awesome_rounded,
+      label: 'Stories',
+    ),
+    AdaptiveDestination(
+      icon: Icons.call_outlined,
+      selectedIcon: Icons.call_rounded,
+      label: 'Calls',
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: _screens),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: isDark
-                  ? MessengerTheme.darkDividerColor
-                  : MessengerTheme.dividerColor,
-            ),
-          ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline_rounded),
-              activeIcon: Icon(Icons.chat_bubble_rounded),
-              label: 'Chats',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people_outline_rounded),
-              activeIcon: Icon(Icons.people_rounded),
-              label: 'People',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.circle_outlined),
-              activeIcon: Icon(Icons.circle),
-              label: 'Stories',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.call_outlined),
-              activeIcon: Icon(Icons.call_rounded),
-              label: 'Calls',
-            ),
-          ],
-        ),
-      ),
+    return AdaptiveShell(
+      selectedIndex: _selectedIndex,
+      onSelected: (i) => setState(() => _selectedIndex = i),
+      screens: _screens,
+      destinations: _destinations,
     );
   }
 }

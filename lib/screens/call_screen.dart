@@ -161,35 +161,42 @@ class _CallScreenState extends State<CallScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background gradient or video
           if (widget.isVideo && _webrtcReady)
             Positioned.fill(child: RTCVideoView(_webrtc.remoteRenderer, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover))
           else
-            Container(decoration: BoxDecoration(gradient: isDark ? const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF1C1C1E), Color(0xFF101012)]) : const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFE3F2FF), Color(0xFFBBDEFB)]))),
-          // Foreground UI
+            Container(decoration: BoxDecoration(gradient: isDark ? const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF0A0A0F), Color(0xFF1A1A1E), Color(0xFF121214)]) : const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFEAF3FF), Color(0xFFD4E8FF), Color(0xFFBBDEFB)]))),
+          // subtle vignette
+          Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: RadialGradient(center: Alignment.center, radius: 0.9, colors: [Colors.transparent, Colors.black.withOpacity(isDark ? 0.35 : 0.06)])))),
           SafeArea(child: Column(children: [
-            Align(alignment: Alignment.topLeft, child: Padding(padding: const EdgeInsets.all(8), child: IconButton(onPressed: _endCall, icon: Icon(Icons.keyboard_arrow_down_rounded, size: 32, color: widget.isVideo && _webrtcReady ? Colors.white : isDark ? Colors.white : Colors.black87)))),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: Row(children: [
+                Container(decoration: BoxDecoration(color: Colors.black26, shape: BoxShape.circle), child: IconButton(onPressed: _endCall, icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 28, color: Colors.white))),
+                const Spacer(),
+                Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(999)), child: Row(children: [Container(width:8,height:8,decoration: BoxDecoration(color: _accepted ? MessengerTheme.messengerGreen : Colors.orange, shape: BoxShape.circle)), const SizedBox(width:6), Text(_statusText(), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700))])),
+                const Spacer(),
+                Container(decoration: BoxDecoration(color: Colors.black26, shape: BoxShape.circle), child: IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert_rounded, color: Colors.white, size: 20))),
+              ]),
+            ),
             const Spacer(),
-            if (!(widget.isVideo && _webrtcReady) ) ...[
-              CircleAvatar(radius: 60, backgroundImage: NetworkImage(widget.avatarUrl), backgroundColor: Colors.white.withValues(alpha: 0.6)),
-              const SizedBox(height: 24),
+            if (!(widget.isVideo && _webrtcReady)) ...[
+              Container(decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 3), boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 24, offset: Offset(0, 8))]), child: CircleAvatar(radius: 66, backgroundImage: NetworkImage(widget.avatarUrl), backgroundColor: Colors.white)),
+              const SizedBox(height: 20),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(999)), child: Text(widget.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18, letterSpacing: -0.3))),
+              const SizedBox(height: 8),
+              Text(widget.isIncoming ? 'is calling you…' : 'ringing…', style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 14, fontWeight: FontWeight.w500)),
+            ] else ...[
+              Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(999)), child: Row(mainAxisSize: MainAxisSize.min, children: [CircleAvatar(radius: 12, backgroundImage: NetworkImage(widget.avatarUrl)), const SizedBox(width: 8), Text(widget.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)), const SizedBox(width: 8), Container(width:6,height:6,decoration: const BoxDecoration(color: MessengerTheme.messengerGreen, shape: BoxShape.circle))])),
             ],
-            if (widget.isVideo && _webrtcReady)
-              Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12)), child: Text(widget.name, style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600))),
-            if (!(widget.isVideo && _webrtcReady))
-              Text(widget.name, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: widget.isVideo && _webrtcReady ? Colors.white : isDark ? Colors.white : Colors.black87)),
-            const SizedBox(height: 8),
-            Text(_statusText(), style: TextStyle(fontSize: 16, color: widget.isVideo && _webrtcReady ? Colors.white70 : isDark ? const Color(0xFFB0B3B8) : MessengerTheme.textSecondary)),
             const Spacer(),
-            if (_accepted) _buildCallControls(isDark, webrtcOverlay: widget.isVideo && _webrtcReady),
+            if (_accepted) _buildCallControls(isDark, webrtcOverlay: true),
             const Spacer(),
             _buildActionButtons(isDark),
-            const SizedBox(height: 24),
-            if (SupabaseConfig.turnUrl.contains('openrelay')) Padding(padding: const EdgeInsets.only(bottom:8), child: Text('Free TURN: ${SupabaseConfig.turnUrl} fallback', style: TextStyle(fontSize:10, color: isDark? Colors.white38: Colors.black38))),
+            const SizedBox(height: 18),
+            if (SupabaseConfig.turnUrl.contains('openrelay')) Padding(padding: const EdgeInsets.only(bottom:8), child: Text('HD • Encrypted • Free TURN fallback', style: TextStyle(fontSize: 10, letterSpacing: 0.4, color: Colors.white.withOpacity(0.55)))),
           ])),
-          // PiP local video draggable
           if (widget.isVideo && _webrtcReady && _cameraOn)
-            Positioned(top: 80, right: 16, child: Draggable(child:           Container(width: 110, height: 150, decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white, width:2), boxShadow: const [BoxShadow(color: Colors.black45, blurRadius:8)]), clipBehavior: Clip.hardEdge, child: RTCVideoView(_webrtc.localRenderer, mirror: true, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover)), feedback: Container(width:110,height:150, decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white, width:2)), clipBehavior: Clip.hardEdge, child: RTCVideoView(_webrtc.localRenderer, mirror:true)), childWhenDragging: const SizedBox())),
+            Positioned(top: 86, right: 14, child: Draggable(feedback: Container(width:116,height:154, decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white, width:2), boxShadow: const [BoxShadow(color: Colors.black45, blurRadius:12)]), clipBehavior: Clip.hardEdge, child: RTCVideoView(_webrtc.localRenderer, mirror:true)), childWhenDragging: const SizedBox(), child: Container(width: 116, height: 154, decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white, width:2), boxShadow: const [BoxShadow(color: Colors.black45, blurRadius:12)]), clipBehavior: Clip.hardEdge, child: Stack(children: [RTCVideoView(_webrtc.localRenderer, mirror: true, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover), Positioned(bottom:6, right:6, child: Container(padding: const EdgeInsets.all(6), decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle), child: const Icon(Icons.flip_camera_ios_rounded, color: Colors.white, size:14)))])))),
         ],
       ),
     );

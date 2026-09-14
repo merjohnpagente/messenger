@@ -1,0 +1,16 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00C6FF"/>
+      <stop offset="50%" stop-color="#0084FF"/>
+      <stop offset="100%" stop-color="#0066FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <!-- bubble -->
+  <rect x="77" y="92" width="358" height="318" rx="92" fill="white"/>
+  <path d="M 164 374 L 133 440 L 230 384 Z" fill="white"/>
+  <!-- bolt -->
+  <path d="M 297 143 L 215 246 L 266 256 L 225 374 L 328 241 L 266 236 Z" fill="#0084FF"/>
+  <path d="M 276 164 L 225 236 L 251 241 L 286 174 Z" fill="white" opacity="0.35"/>
+</svg>

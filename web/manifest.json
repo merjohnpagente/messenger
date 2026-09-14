@@ -1,12 +1,12 @@
 {
-    "name": "Messenger",
+    "name": "Messenger — Modern Chat",
     "short_name": "Messenger",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0084FF",
     "theme_color": "#0084FF",
-    "description": "Messenger by Meta.",
-    "orientation": "portrait-primary",
+    "description": "Modern Messenger — fast, secure, realtime chat & HD calls. Responsive on mobile, tablet & desktop.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

@@ -111,65 +111,52 @@ class _CallsScreenState extends State<CallsScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final calls = _getFilteredCalls();
-
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        toolbarHeight: 56,
-        title: const Text('Calls'),
+        toolbarHeight: 64,
+        backgroundColor: isDark ? const Color(0xFF1A1A1E) : Colors.white,
+        title: Row(children: [
+          Container(width: 36, height: 36, decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.call_rounded, color: MessengerTheme.messengerGreen, size: 18)),
+          const SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Calls', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            Text('${calls.length} recent • HD quality', style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 11)),
+          ]),
+        ]),
         actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.edit_outlined,
-              size: 24,
-              color: MessengerTheme.messengerBlue,
-            ),
-            tooltip: 'New message',
-          ),
+          IconButton.filledTonal(onPressed: () {}, icon: const Icon(Icons.videocam_rounded, size: 18), style: IconButton.styleFrom(backgroundColor: MessengerTheme.messengerBlue, foregroundColor: Colors.white)),
+          const SizedBox(width: 8),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          MessengerSearchBar(
-            onChanged: (value) {
-              setState(() {
-                searchQuery = value;
-              });
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              'Calls you\'ve made',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w700,
-                  ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            MessengerSearchBar(onChanged: (v) => setState(()=> searchQuery = v), hintText: 'Search calls'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+              child: Row(children: [
+                Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF0084FF), Color(0xFF0066FF)]), borderRadius: BorderRadius.circular(999)), child: const Row(children: [Icon(Icons.history_rounded, size: 14, color: Colors.white), SizedBox(width: 4), Text('Recent', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700))])),
+                const SizedBox(width: 8),
+                Chip(label: const Text('Missed'), backgroundColor: isDark ? const Color(0xFF232324) : Colors.white, side: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFE4E6EB)), labelStyle: Theme.of(context).textTheme.labelSmall),
+              ]),
             ),
-          ),
-          Divider(
-            height: 1,
-            color: isDark
-                ? MessengerTheme.darkDividerColor
-                : MessengerTheme.dividerColor,
-          ),
-          Expanded(
-            child: calls.isEmpty
-                ? Center(
-                    child: Text(
-                      'No calls found',
-                      style: Theme.of(context).textTheme.bodyMedium,
+            Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFE8EAED)),
+            Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), child: Text('Recent calls', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.2))),
+            Expanded(
+              child: calls.isEmpty
+                  ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.call_outlined, size: 48, color: MessengerTheme.textSecondary.withOpacity(0.4)), const SizedBox(height: 12), Text('No calls found', style: Theme.of(context).textTheme.bodyMedium)]))
+                  : ListView.separated(
+                      itemCount: calls.length,
+                      separatorBuilder: (_, __) => Divider(height: 1, indent: 72, color: Theme.of(context).dividerColor.withOpacity(0.35)),
+                      itemBuilder: (context, index) => _buildCallTile(context, calls[index]),
                     ),
-                  )
-                : ListView.builder(
-                    itemCount: calls.length,
-                    itemBuilder: (context, index) =>
-                        _buildCallTile(context, calls[index]),
-                  ),
-          ),
-        ],
+            ),
+          ]),
+        ),
       ),
+      floatingActionButton: FloatingActionButton.extended(onPressed: () {}, backgroundColor: MessengerTheme.messengerGreen, foregroundColor: Colors.white, icon: const Icon(Icons.add_call, size: 20), label: const Text('New call', style: TextStyle(fontWeight: FontWeight.w700))),
     );
   }
 
@@ -256,28 +243,15 @@ class _CallsScreenState extends State<CallsScreen> {
 
 class _CallButton extends StatelessWidget {
   final bool isVideo;
-
   const _CallButton({required this.isVideo});
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark
-        ? const Color(0xFF3A3B3C)
-        : MessengerTheme.lightSecondaryBg;
-
     return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: bg,
-      ),
-      child: Icon(
-        isVideo ? Icons.videocam_rounded : Icons.call_rounded,
-        size: 20,
-        color: MessengerTheme.messengerGreen,
-      ),
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(shape: BoxShape.circle, gradient: isVideo ? const LinearGradient(colors: [Color(0xFF0084FF), Color(0xFF0066FF)]) : const LinearGradient(colors: [Color(0xFF31A24C), Color(0xFF248A3D)]), boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 8, offset: Offset(0, 2))]),
+      child: Icon(isVideo ? Icons.videocam_rounded : Icons.call_rounded, size: 18, color: Colors.white),
     );
   }
 }

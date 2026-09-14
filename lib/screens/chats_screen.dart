@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:messenger/core/services/supabase_service.dart';
 import 'package:messenger/features/chat/chat_repository.dart';
 import 'package:messenger/screens/chat_thread_screen.dart';
+import 'package:messenger/theme/app_tokens.dart';
 import 'package:messenger/theme/messenger_theme.dart';
 import 'package:messenger/widgets/chat_tile.dart';
 import 'package:messenger/widgets/messenger_search_bar.dart';
@@ -279,35 +280,72 @@ class _ChatsScreenState extends State<ChatsScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final filteredConversations = _getFilteredConversations();
+    final isWide = MediaQuery.sizeOf(context).width >= 840;
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(context, isDark),
-      body: Column(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isWide ? 720 : double.infinity),
+          child: Column(
+            children: [
+              if (!SupabaseService.isReady)
+                Container(
+                  height: 28,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFF7A00), Color(0xFFFF9500)])),
+                  alignment: Alignment.center,
+                  child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.cloud_off_rounded, size: 14, color: Colors.white),
+                    SizedBox(width: 6),
+                    Text('Demo mode — offline Hive queue · add SUPABASE_URL for LIVE', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.2)),
+                  ]),
+                ),
+              MessengerSearchBar(
+                onChanged: (value) => setState(() => searchQuery = value),
+              ),
+              _buildStoriesSection(isDark),
+              Expanded(child: _buildChatsList(filteredConversations)),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: isWide ? null : FloatingActionButton.extended(
+        onPressed: () {},
+        backgroundColor: MessengerTheme.messengerBlue,
+        foregroundColor: Colors.white,
+        elevation: 2,
+        icon: const Icon(Icons.edit_rounded, size: 20),
+        label: const Text('New chat', style: TextStyle(fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+
+  Widget _buildStoriesSection(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A1E) : Colors.white,
+        border: Border(top: BorderSide(color: isDark ? const Color(0xFF232324) : const Color(0xFFF0F2F5)), bottom: BorderSide(color: isDark ? const Color(0xFF232324) : const Color(0xFFF0F2F5))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!SupabaseService.isReady) Container(height: 24, width: double.infinity, color: const Color(0xFFFF7A00), alignment: Alignment.center, child: const Text('Demo mode — offline Hive queue · add SUPABASE_URL for LIVE', style: TextStyle(color: Colors.white, fontSize:12, fontWeight: FontWeight.w600))),
-          MessengerSearchBar(
-            onChanged: (value) {
-              setState(() {
-                searchQuery = value;
-              });
-            },
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Text('Stories', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.2)),
+                const SizedBox(width: 8),
+                Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: MessengerTheme.messengerBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(999)), child: Text('${stories.length}', style: const TextStyle(color: MessengerTheme.messengerBlue, fontSize: 11, fontWeight: FontWeight.w700))),
+                const Spacer(),
+                TextButton(onPressed: () {}, child: const Text('See all', style: TextStyle(color: MessengerTheme.messengerBlue, fontWeight: FontWeight.w600, fontSize: 13))),
+              ],
+            ),
           ),
-          Divider(
-            height: 1,
-            color: isDark
-                ? MessengerTheme.darkDividerColor
-                : MessengerTheme.dividerColor,
-          ),
+          const SizedBox(height: 4),
           _buildStoriesRow(),
-          Divider(
-            height: 1,
-            color: isDark
-                ? MessengerTheme.darkDividerColor
-                : MessengerTheme.dividerColor,
-          ),
-          Expanded(
-            child: _buildChatsList(filteredConversations),
-          ),
         ],
       ),
     );
@@ -315,38 +353,59 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
   PreferredSizeWidget _buildAppBar(BuildContext context, bool isDark) {
     return AppBar(
-      toolbarHeight: 56,
-      title: Row(children: [
-        const Text('Messenger'),
-        if (_liveLoaded) Container(margin: const EdgeInsets.only(left:8), padding: const EdgeInsets.symmetric(horizontal:6, vertical:2), decoration: BoxDecoration(color: MessengerTheme.messengerGreen, borderRadius: BorderRadius.circular(8)), child: const Text('LIVE', style: TextStyle(color: Colors.white, fontSize:10))),
-        if (!SupabaseService.isReady) Container(margin: const EdgeInsets.only(left:8), padding: const EdgeInsets.symmetric(horizontal:6, vertical:2), decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(8)), child: const Text('DEMO', style: TextStyle(color: Colors.white, fontSize:10))),
-      ]),
+      toolbarHeight: 64,
+      backgroundColor: isDark ? const Color(0xFF1A1A1E) : Colors.white,
+      surfaceTintColor: Colors.transparent,
+      title: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(11), gradient: AppGradients.primary, boxShadow: const [BoxShadow(color: Color(0x330084FF), blurRadius: 10, offset: Offset(0, 2))]),
+            child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 22),
+          ),
+          const SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Text('Chats', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+              const SizedBox(width: 8),
+              if (_liveLoaded)
+                Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3), decoration: BoxDecoration(color: MessengerTheme.messengerGreen, borderRadius: BorderRadius.circular(999)), child: Row(mainAxisSize: MainAxisSize.min, children: [Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)), const SizedBox(width: 4), const Text('LIVE', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5))])),
+              if (!SupabaseService.isReady)
+                Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFF9500), Color(0xFFFF7A00)]), borderRadius: BorderRadius.circular(999)), child: const Text('DEMO', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5))),
+            ]),
+            Text('${_getFilteredConversations().length} conversations', style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 11, color: isDark ? const Color(0xFF8A8D91) : MessengerTheme.textSecondary)),
+          ]),
+        ],
+      ),
       actions: [
-        IconButton(
-          onPressed: () async {
-            if (SupabaseService.isReady) {
-              await SupabaseService.client.auth.signOut();
-              if (context.mounted) context.go('/login');
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Demo mode — configure Supabase for real logout')));
-            }
-          },
-          icon: const Icon(
-            Icons.logout_rounded,
-            size: 22,
-            color: MessengerTheme.messengerBlue,
-          ),
-          tooltip: 'Log out',
-        ),
-        IconButton(
+        IconButton.filledTonal(
           onPressed: () {},
-          icon: const Icon(
-            Icons.edit_outlined,
-            size: 24,
-            color: MessengerTheme.messengerBlue,
-          ),
+          icon: const Icon(Icons.videocam_rounded, size: 20),
+          style: IconButton.styleFrom(backgroundColor: isDark ? const Color(0xFF232324) : const Color(0xFFF0F2F5), foregroundColor: MessengerTheme.messengerBlue),
+          tooltip: 'New call',
+        ),
+        const SizedBox(width: 4),
+        IconButton.filled(
+          onPressed: () {},
+          icon: const Icon(Icons.edit_rounded, size: 18),
+          style: IconButton.styleFrom(backgroundColor: MessengerTheme.messengerBlue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
           tooltip: 'New message',
         ),
+        const SizedBox(width: 8),
+        PopupMenuButton(
+          icon: CircleAvatar(radius: 18, backgroundImage: NetworkImage('https://api.dicebear.com/7.x/avataaars/svg?seed=you'), backgroundColor: isDark ? const Color(0xFF232324) : const Color(0xFFF0F2F5)),
+          itemBuilder: (c) => [
+            const PopupMenuItem(value: 'profile', child: Row(children: [Icon(Icons.person_outline, size: 18), SizedBox(width: 8), Text('Profile')])),
+            const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout_rounded, size: 18, color: MessengerTheme.messengerRed), SizedBox(width: 8), Text('Log out', style: TextStyle(color: MessengerTheme.messengerRed))])),
+          ],
+          onSelected: (v) async {
+            if (v == 'logout') {
+              if (SupabaseService.isReady) { await SupabaseService.client.auth.signOut(); if (context.mounted) context.go('/login'); } else { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Demo mode — configure Supabase for real logout'))); }
+            }
+          },
+        ),
+        const SizedBox(width: 8),
       ],
     );
   }
@@ -387,25 +446,27 @@ class _ChatsScreenState extends State<ChatsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.mail_outline_rounded,
-              size: 64,
-              color: MessengerTheme.textSecondary.withValues(alpha: 0.5),
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF232324) : const Color(0xFFF0F2F5), shape: BoxShape.circle),
+              child: Icon(Icons.forum_outlined, size: 42, color: MessengerTheme.textSecondary.withOpacity(0.5)),
             ),
             const SizedBox(height: 16),
-            Text(
-              'No conversations found',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: MessengerTheme.textSecondary,
-                  ),
-            ),
+            Text('No conversations yet', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            Text('Start a new chat to see it here', style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 16),
+            FilledButton.icon(onPressed: () {}, icon: const Icon(Icons.add_rounded, size: 18), label: const Text('New conversation')),
           ],
         ),
       );
     }
 
-    return ListView.builder(
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: chats.length,
+      separatorBuilder: (_, __) => Divider(height: 1, indent: 78, color: Theme.of(context).dividerColor.withOpacity(0.5)),
       itemBuilder: (context, index) {
         final chat = chats[index];
         return ChatTile(
@@ -416,6 +477,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
           unreadCount: chat.unreadCount,
           isActive: chat.isActive,
           onTap: () {
+            if (MediaQuery.sizeOf(context).width >= 900) {
+              // On wide screens, show as dialog/side sheet for demo — keep push for simplicity
+            }
             Navigator.push(
               context,
               MaterialPageRoute(

@@ -150,165 +150,126 @@ class _PeopleScreenState extends State<PeopleScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final filtered = _getFilteredPeople();
+    final w = MediaQuery.sizeOf(context).width;
+    final isGrid = w >= 700;
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        toolbarHeight: 56,
-        title: const Text('People'),
+        toolbarHeight: 64,
+        backgroundColor: isDark ? const Color(0xFF1A1A1E) : Colors.white,
+        title: Row(children: [
+          Container(width: 36, height: 36, decoration: BoxDecoration(color: const Color(0xFFEAF3FF), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.people_rounded, color: MessengerTheme.messengerBlue, size: 20)),
+          const SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('People', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            Text('${filtered.length} contacts • ${filtered.where((p)=>p.isActive).length} online', style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 11)),
+          ]),
+        ]),
         actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.edit_outlined,
-              size: 24,
-              color: MessengerTheme.messengerBlue,
-            ),
-            tooltip: 'New message',
-          ),
+          IconButton.filledTonal(onPressed: () {}, icon: const Icon(Icons.person_add_rounded, size: 18), style: IconButton.styleFrom(backgroundColor: isDark ? const Color(0xFF232324) : const Color(0xFFF0F2F5))),
+          const SizedBox(width: 8),
         ],
       ),
-      body: Column(
-        children: [
-          MessengerSearchBar(
-            onChanged: (value) {
-              setState(() {
-                searchQuery = value;
-              });
-            },
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(
+            children: [
+              MessengerSearchBar(onChanged: (v) => setState(()=> searchQuery = v), hintText: 'Search people'),
+              _buildFilterRow(),
+              Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFE8EAED)),
+              Expanded(
+                child: isGrid
+                    ? GridView.builder(
+                        padding: const EdgeInsets.all(12),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 2.8, crossAxisSpacing: 12, mainAxisSpacing: 12),
+                        itemCount: filtered.length,
+                        itemBuilder: (c,i)=> _buildPersonCard(filtered[i], isDark),
+                      )
+                    : ListView.separated(
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, __)=> Divider(height: 1, indent: 72, color: Theme.of(context).dividerColor.withOpacity(0.4)),
+                        itemBuilder: (context, index) => _buildPersonTile(filtered[index]),
+                      ),
+              ),
+            ],
           ),
-          _buildFilterRow(),
-          Divider(
-            height: 1,
-            color: isDark
-                ? MessengerTheme.darkDividerColor
-                : MessengerTheme.dividerColor,
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: filtered.length,
-              itemBuilder: (context, index) => _buildPersonTile(filtered[index]),
-            ),
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildPersonCard(PersonModel p, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: isDark ? const Color(0xFF1E1E20) : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE8EAED)), boxShadow: isDark ? [] : const [BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0,2))]),
+      child: Row(children: [
+        _buildAvatar(p, isDark),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(p.name, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 2),
+          Row(children: [Container(width:6,height:6,decoration: BoxDecoration(color: p.isActive? MessengerTheme.messengerGreen: const Color(0xFFB0B3B8), shape: BoxShape.circle)), const SizedBox(width:4), Expanded(child: Text(p.isActive? 'Active now': (p.lastSeenText?? 'Offline'), style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize:11, color: p.isActive? MessengerTheme.messengerGreen: null), maxLines:1))]),
+        ])),
+        IconButton.filledTonal(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_)=> ChatThreadScreen(name: p.name, avatarUrl: p.avatarUrl, isActive: p.isActive))), icon: const Icon(Icons.chat_bubble_rounded, size:16), style: IconButton.styleFrom(backgroundColor: MessengerTheme.messengerBlue.withOpacity(0.12), foregroundColor: MessengerTheme.messengerBlue)),
+      ]),
     );
   }
 
   Widget _buildFilterRow() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Padding(
-      padding: const EdgeInsets.only(left: 16, bottom: 12),
-      child: Row(
-        children: List.generate(_filters.length, (index) {
-          final selected = index == _filterIndex;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _filterIndex = index;
-                });
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? MessengerTheme.messengerBlue
-                      : (isDark
-                          ? MessengerTheme.darkSecondaryBg
-                          : MessengerTheme.lightSecondaryBg),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  _filters[index],
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: selected
-                        ? Colors.white
-                        : (isDark
-                            ? const Color(0xFFB0B3B8)
-                            : MessengerTheme.textSecondary),
-                  ),
-                ),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(_filters.length, (index) {
+            final sel = index == _filterIndex;
+            final icons = [Icons.group_rounded, Icons.bolt_rounded, Icons.auto_awesome_rounded];
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                selected: sel,
+                onSelected: (_) => setState(()=> _filterIndex = index),
+                label: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icons[index], size: 14, color: sel ? Colors.white : (isDark? Colors.white70: MessengerTheme.textSecondary)), const SizedBox(width:6), Text(_filters[index])]),
+                labelStyle: TextStyle(fontSize:13, fontWeight: FontWeight.w600, color: sel ? Colors.white : (isDark? const Color(0xFFB0B3B8): MessengerTheme.textSecondary)),
+                backgroundColor: isDark ? const Color(0xFF232324) : Colors.white,
+                selectedColor: MessengerTheme.messengerBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999), side: BorderSide(color: sel? MessengerTheme.messengerBlue: (isDark? Colors.white12: const Color(0xFFE4E6EB)))),
+                showCheckmark: false,
+                padding: const EdgeInsets.symmetric(horizontal:12, vertical:6),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }
 
   Widget _buildPersonTile(PersonModel person) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ChatThreadScreen(
-              name: person.name,
-              avatarUrl: person.avatarUrl,
-              isActive: person.isActive,
-            ),
-          ),
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        child: Row(
-          children: [
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_)=> ChatThreadScreen(name: person.name, avatarUrl: person.avatarUrl, isActive: person.isActive))),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(children: [
             _buildAvatar(person, isDark),
             const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    person.name,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : Colors.black,
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    person.isActive
-                        ? 'Active now'
-                        : (person.lastSeenText ?? 'Last seen recently'),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 13,
-                          color: person.isActive
-                              ? MessengerTheme.messengerBlue
-                              : (isDark
-                                  ? const Color(0xFFB0B3B8)
-                                  : MessengerTheme.textSecondary),
-                          fontWeight: FontWeight.w400,
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              onPressed: () {},
-              icon: Icon(
-                Icons.edit_outlined,
-                size: 20,
-                color: isDark
-                    ? const Color(0xFF8A8D91)
-                    : MessengerTheme.textSecondary,
-              ),
-            ),
-          ],
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(person.name, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 15), maxLines:1, overflow: TextOverflow.ellipsis),
+              const SizedBox(height:2),
+              Row(children:[
+                Container(width:7,height:7,decoration: BoxDecoration(shape: BoxShape.circle, color: person.isActive? MessengerTheme.messengerGreen: const Color(0xFFB0B3B8))),
+                const SizedBox(width:6),
+                Expanded(child: Text(person.isActive? 'Active now • Online': (person.lastSeenText?? 'Last seen recently'), style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize:12, color: person.isActive? MessengerTheme.messengerGreen: null), maxLines:1, overflow: TextOverflow.ellipsis)),
+              ]),
+            ])),
+            Container(width:36,height:36,decoration: BoxDecoration(color: isDark? const Color(0xFF232324): const Color(0xFFF0F2F5), shape: BoxShape.circle), child: Icon(Icons.chat_bubble_outline_rounded, size:16, color: isDark? Colors.white70: MessengerTheme.textSecondary)),
+          ]),
         ),
       ),
     );
