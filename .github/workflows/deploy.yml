@@ -42,7 +42,8 @@ jobs:
           flutter build web --release \
             --base-href "/${{ github.event.repository.name }}/" \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY || secrets.SUPABASE_PUBLISHABLE_KEY }} \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY=${{ secrets.SUPABASE_PUBLISHABLE_KEY || secrets.SUPABASE_ANON_KEY }} \
             --dart-define=TURN_URL=${{ secrets.TURN_URL || 'turn:openrelay.metered.ca:80' }} \
             --dart-define=TURN_URL2=${{ secrets.TURN_URL2 || 'turn:openrelay.metered.ca:443' }} \
             --dart-define=TURN_USER=${{ secrets.TURN_USER || 'openrelayproject' }} \

@@ -1,6 +1,9 @@
 class SupabaseConfig {
   static const url = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
-  static const anonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
+  // Support both legacy anon (eyJ...) and new publishable (sb_publishable_...) + new env name
+  static const _anon = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
+  static const _publishable = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY', defaultValue: '');
+  static String get anonKey => _anon.isNotEmpty ? _anon : _publishable;
   static const turnUrl = String.fromEnvironment('TURN_URL', defaultValue: 'turn:openrelay.metered.ca:80');
   static const turnUrl2 = String.fromEnvironment('TURN_URL2', defaultValue: 'turn:openrelay.metered.ca:443');
   static const turnUser = String.fromEnvironment('TURN_USER', defaultValue: 'openrelayproject');
