@@ -33,6 +33,11 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Messenger local
+.env
+test_hive_temp/
+android/build/
+
 # Symbolication related
 app.*.symbols
 

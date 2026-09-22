@@ -1,23 +1,31 @@
 {
     "name": "Messenger — Modern Chat",
     "short_name": "Messenger",
+    "id": "/",
+    "scope": ".",
     "start_url": ".",
     "display": "standalone",
+    "display_override": ["window-controls-overlay", "standalone"],
     "background_color": "#0084FF",
     "theme_color": "#0084FF",
     "description": "Modern Messenger — fast, secure, realtime chat & HD calls. Responsive on mobile, tablet & desktop.",
     "orientation": "any",
+    "categories": ["social", "communication"],
     "prefer_related_applications": false,
+    "launch_handler": { "client_mode": "auto" },
+    "handle_links": "preferred",
     "icons": [
         {
             "src": "icons/Icon-192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "icons/Icon-512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "icons/Icon-maskable-192.png",
@@ -30,6 +38,18 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Chats",
+            "url": "./home",
+            "description": "Open chats"
+        },
+        {
+            "name": "Calls",
+            "url": "./home",
+            "description": "View recent calls"
         }
     ]
 }

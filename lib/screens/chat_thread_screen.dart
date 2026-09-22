@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
@@ -406,15 +407,24 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
       final picker = ImagePicker();
       final x = await picker.pickImage(source: source, imageQuality: 70, maxWidth: 1024);
       if (x == null) return;
-      final file = File(x.path);
-      if (await file.length() > StorageService.maxImageBytes) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Image too large — compressing to <1MB...')));
+      final Uint8List bytes = await x.readAsBytes();
+      if (bytes.lengthInBytes > StorageService.maxImageBytes) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(kIsWeb ? 'Image >1MB — pick a smaller image for web' : 'Image too large — compressing to <1MB...')),
+          );
+          if (kIsWeb) return; // avoid uploading oversize on web where compress not available
+        }
       }
       setState(() => _messages.add(MessageModel(id: DateTime.now().microsecondsSinceEpoch.toString(), text: '📷 Photo', time: DateTime.now(), isMine: true)));
       _scrollToBottom();
-      final url = await StorageService.uploadMessageMedia(file, _convId);
+      final ext = x.name.split('.').last.toLowerCase();
+      final safeExt = ['jpg', 'jpeg', 'png', 'webp', 'heic'].contains(ext) ? ext : 'jpg';
+      final url = await StorageService.uploadMessageMediaBytes(bytes, _convId, ext: safeExt);
       if (url != null && SupabaseService.isReady) {
         await _chatRepo.sendMessage(conversationId: _convId, text: '📷 Photo', type: 'image', mediaUrl: url);
+      } else if (SupabaseService.isReady && bytes.lengthInBytes > StorageService.maxImageBytes) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Image still >1MB after compression — try a smaller photo')));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pick failed: $e')));
@@ -423,17 +433,34 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
   Future<void> _pickFile() async {
     try {
-      final res = await FilePicker.platform.pickFiles(withData: false);
-      if (res == null || res.files.single.path == null) return;
-      final file = File(res.files.single.path!);
-      if (await file.length() > StorageService.maxVideoBytes) {
+      // withData:true ensures bytes available on web (path is null on web)
+      final res = await FilePicker.platform.pickFiles(withData: true);
+      if (res == null || res.files.isEmpty) return;
+      final picked = res.files.single;
+      Uint8List? bytes = picked.bytes;
+      // Fallback: if bytes null but path exists (native without withData), try dynamic File read
+      if (bytes == null && picked.path != null) {
+        // Keep web-safe: attempt dynamic read without importing dart:io statically
+        try {
+          // ignore: avoid_dynamic_calls
+          final dynamic file = picked.path; // placeholder — will fallback to bytes path
+          // Actually FilePicker path case without bytes: read via XFile-like dynamic not available
+          // So we request withData:true above; if still null, bail.
+        } catch (_) {}
+      }
+      if (bytes == null) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not read file bytes')));
+        return;
+      }
+      if (bytes.lengthInBytes > StorageService.maxVideoBytes) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File exceeds 10MB limit (free tier)')));
         return;
       }
-      setState(() => _messages.add(MessageModel(id: DateTime.now().microsecondsSinceEpoch.toString(), text: '📎 ${res.files.single.name}', time: DateTime.now(), isMine: true)));
+      setState(() => _messages.add(MessageModel(id: DateTime.now().microsecondsSinceEpoch.toString(), text: '📎 ${picked.name}', time: DateTime.now(), isMine: true)));
       _scrollToBottom();
-      final url = await StorageService.uploadMessageMedia(file, _convId, ext: res.files.single.extension ?? 'bin');
-      if (url != null && SupabaseService.isReady) await _chatRepo.sendMessage(conversationId: _convId, text: res.files.single.name, type: 'file', mediaUrl: url);
+      final ext = picked.extension ?? 'bin';
+      final url = await StorageService.uploadMessageMediaBytes(bytes, _convId, ext: ext);
+      if (url != null && SupabaseService.isReady) await _chatRepo.sendMessage(conversationId: _convId, text: picked.name, type: 'file', mediaUrl: url);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('File pick failed: $e')));
     }

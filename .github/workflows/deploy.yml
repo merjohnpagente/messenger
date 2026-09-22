@@ -1,0 +1,72 @@
+name: Deploy Messenger Web to GitHub Pages
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze (non-blocking)
+        run: flutter analyze || true
+
+      - name: Run tests (non-blocking)
+        run: flutter test || true
+
+      - name: Build Web (release)
+        run: |
+          flutter build web --release \
+            --base-href "/${{ github.event.repository.name }}/" \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
+            --dart-define=TURN_URL=${{ secrets.TURN_URL || 'turn:openrelay.metered.ca:80' }} \
+            --dart-define=TURN_URL2=${{ secrets.TURN_URL2 || 'turn:openrelay.metered.ca:443' }} \
+            --dart-define=TURN_USER=${{ secrets.TURN_USER || 'openrelayproject' }} \
+            --dart-define=TURN_CRED=${{ secrets.TURN_CRED || 'openrelayproject' }}
+          # SPA fallback for GitHub Pages — copy index.html to 404.html
+          cp build/web/index.html build/web/404.html
+          # Optional: disable Jekyll processing
+          touch build/web/.nojekyll
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

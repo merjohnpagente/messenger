@@ -6,10 +6,10 @@ enum ScreenSize { compact, medium, expanded, large }
 class Responsive {
   static ScreenSize sizeOf(BuildContext context) {
     final w = MediaQuery.sizeOf(context).width;
-    if (w >= AppBreakpoints.expanded) return ScreenSize.large;
-    if (w >= AppBreakpoints.medium) return ScreenSize.expanded;
-    if (w >= AppBreakpoints.compact) return ScreenSize.medium;
-    return ScreenSize.compact;
+    if (w >= AppBreakpoints.large) return ScreenSize.large; // 1440+
+    if (w >= AppBreakpoints.medium) return ScreenSize.expanded; // 840-1439 desktop
+    if (w >= AppBreakpoints.compact) return ScreenSize.medium; // 600-839 tablet
+    return ScreenSize.compact; // <600 phone
   }
 
   static bool isCompact(BuildContext context) => sizeOf(context) == ScreenSize.compact;

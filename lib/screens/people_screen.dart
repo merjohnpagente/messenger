@@ -180,18 +180,45 @@ class _PeopleScreenState extends State<PeopleScreen> {
               _buildFilterRow(),
               Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFE8EAED)),
               Expanded(
-                child: isGrid
-                    ? GridView.builder(
-                        padding: const EdgeInsets.all(12),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 2.8, crossAxisSpacing: 12, mainAxisSpacing: 12),
-                        itemCount: filtered.length,
-                        itemBuilder: (c,i)=> _buildPersonCard(filtered[i], isDark),
+                child: filtered.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 72,
+                              height: 72,
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF232324) : const Color(0xFFF0F2F5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.search_off_rounded, size: 36, color: MessengerTheme.textSecondary.withOpacity(0.5)),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              searchQuery.isNotEmpty ? 'No results for "$searchQuery"' : 'No people yet',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              searchQuery.isNotEmpty ? 'Try a different name' : 'Invite friends to join Messenger',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
                       )
-                    : ListView.separated(
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, __)=> Divider(height: 1, indent: 72, color: Theme.of(context).dividerColor.withOpacity(0.4)),
-                        itemBuilder: (context, index) => _buildPersonTile(filtered[index]),
-                      ),
+                    : isGrid
+                        ? GridView.builder(
+                            padding: const EdgeInsets.all(12),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 2.8, crossAxisSpacing: 12, mainAxisSpacing: 12),
+                            itemCount: filtered.length,
+                            itemBuilder: (c,i)=> _buildPersonCard(filtered[i], isDark),
+                          )
+                        : ListView.separated(
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, __)=> Divider(height: 1, indent: 72, color: Theme.of(context).dividerColor.withOpacity(0.4)),
+                            itemBuilder: (context, index) => _buildPersonTile(filtered[index]),
+                          ),
               ),
             ],
           ),
