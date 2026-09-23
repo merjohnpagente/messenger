@@ -38,19 +38,23 @@ jobs:
         run: flutter test || true
 
       - name: Build Web (release)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_PUB: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
-          flutter build web --release \
-            --base-href "/${{ github.event.repository.name }}/" \
-            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY || secrets.SUPABASE_PUBLISHABLE_KEY }} \
-            --dart-define=SUPABASE_PUBLISHABLE_KEY=${{ secrets.SUPABASE_PUBLISHABLE_KEY || secrets.SUPABASE_ANON_KEY }} \
-            --dart-define=TURN_URL=${{ secrets.TURN_URL || 'turn:openrelay.metered.ca:80' }} \
-            --dart-define=TURN_URL2=${{ secrets.TURN_URL2 || 'turn:openrelay.metered.ca:443' }} \
-            --dart-define=TURN_USER=${{ secrets.TURN_USER || 'openrelayproject' }} \
-            --dart-define=TURN_CRED=${{ secrets.TURN_CRED || 'openrelayproject' }}
+          # Build args — use secrets if set, else empty (Dart defaults handle TURN)
+          ARGS="--base-href /${{ github.event.repository.name }}/"
+          if [ -n "$SUPABASE_URL" ]; then ARGS="$ARGS --dart-define=SUPABASE_URL=$SUPABASE_URL"; fi
+          # Support both anon (eyJ) and new publishable (sb_publishable_)
+          KEY="${SUPABASE_ANON:-$SUPABASE_PUB}"
+          if [ -n "$KEY" ]; then
+            ARGS="$ARGS --dart-define=SUPABASE_ANON_KEY=$KEY --dart-define=SUPABASE_PUBLISHABLE_KEY=$KEY"
+          fi
+          echo "Building with: flutter build web --release $ARGS"
+          flutter build web --release $ARGS
           # SPA fallback for GitHub Pages — copy index.html to 404.html
           cp build/web/index.html build/web/404.html
-          # Optional: disable Jekyll processing
           touch build/web/.nojekyll
 
       - name: Setup Pages
